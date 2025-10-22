@@ -105,6 +105,11 @@
                 }
             }
         }
+        
+        // Filter table on page load to show only available jerseys by default
+        window.onload = function() {
+            filterTable();
+        };
     </script>
     </style>
 </head>
@@ -116,7 +121,7 @@
             <label for="playerFilter">Show:</label>
             <select id="playerFilter" onchange="filterTable()">
                 <option value="all">All Players</option>
-                <option value="available">Available Jerseys Only</option>
+                <option value="available" selected>Available Jerseys Only</option>
             </select>
         </div>
         
