@@ -52,12 +52,75 @@
             font-weight: bold;
             text-align: center;
         }
+        .filter-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .filter-container label {
+            font-weight: bold;
+            margin-right: 10px;
+            color: #1a472a;
+        }
+        .filter-container select {
+            padding: 8px 12px;
+            border: 2px solid #1a472a;
+            border-radius: 4px;
+            background-color: white;
+            color: #1a472a;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .filter-container select:focus {
+            outline: none;
+            border-color: #2e7d32;
+            box-shadow: 0 0 5px rgba(26, 71, 42, 0.3);
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+    <script>
+        function filterTable() {
+            const filter = document.getElementById('playerFilter').value;
+            const table = document.getElementById('rosterTable');
+            const rows = table.getElementsByTagName('tr');
+            
+            // Skip header row (index 0)
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const nameCell = row.getElementsByTagName('td')[1]; // Name column
+                
+                if (nameCell) {
+                    const isAvailable = nameCell.innerHTML.includes('<b>AVAILABLE</b>');
+                    
+                    if (filter === 'all') {
+                        row.classList.remove('hidden');
+                    } else if (filter === 'available') {
+                        if (isAvailable) {
+                            row.classList.remove('hidden');
+                        } else {
+                            row.classList.add('hidden');
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Norsemen Hockey Team - Player Roster</h1>
-        <table>
+        
+        <div class="filter-container">
+            <label for="playerFilter">Show:</label>
+            <select id="playerFilter" onchange="filterTable()">
+                <option value="all">All Players</option>
+                <option value="available">Available Jerseys Only</option>
+            </select>
+        </div>
+        
+        <table id="rosterTable">>
             <thead>
                 <tr>
                     <th>Number</th>
