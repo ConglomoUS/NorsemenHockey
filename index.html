@@ -195,17 +195,28 @@
             const playerFilter = document.getElementById('playerFilter').value;
             const levelFilter = document.getElementById('levelFilter').value;
             const statusFilter = document.getElementById('statusFilter').value;
+            console.log('Filter values:', {playerFilter, levelFilter, statusFilter});
             const table = document.getElementById('rosterTable');
             const rows = table.getElementsByTagName('tr');
             
-            // Auto-adjust column visibility based on level filter
-            updateColumnVisibilityForLevel(levelFilter);
+            // Auto-adjust column visibility based on player filter
+            const filtersChanged = updateColumnVisibilityForPlayerFilter(playerFilter);
+            
+            // If filters were changed, the function will re-call filterTable, so just return
+            if (filtersChanged) {
+                return;
+            }
+            
+            // Auto-adjust column visibility based on level filter (but not when viewing available jerseys)
+            if (playerFilter !== 'available') {
+                updateColumnVisibilityForLevel(levelFilter);
+            }
             
             // Skip header row (index 0)
             for (let i = 1; i < rows.length; i++) {
                 const row = rows[i];
-                const nameCell = row.getElementsByTagName('td')[2]; // Name column (was 1, now 2 with Captain column first)
-                const statusCell = row.getElementsByTagName('td')[9]; // Status column (was 8, now 9 with Captain column first)
+                const nameCell = row.getElementsByTagName('td')[2]; // Name column
+                const statusCell = row.getElementsByTagName('td')[8]; // Status column (Captain=0, Number=1, Name=2, B3=3, C1=4, C2=5, TCR=6, Size=7, Status=8, Notes=9)
                 
                 if (nameCell && statusCell) {
                     const isAvailable = nameCell.innerHTML.includes('<b>AVAILABLE</b>');
@@ -213,6 +224,11 @@
                     const isActive = statusText === 'active';
                     const isInactive = statusText === 'inactive';
                     const hasNoStatus = statusText === '';
+                    
+                    // Debug first few rows
+                    if (i <= 3) {
+                        console.log(`Row ${i}: statusText="${statusText}", isActive=${isActive}, hasNoStatus=${hasNoStatus}`);
+                    }
                     
                     // Check player filter
                     let showByPlayer = false;
@@ -249,11 +265,96 @@
                     // Show row only if all filters pass
                     if (showByPlayer && showByLevel && showByStatus) {
                         row.classList.remove('hidden');
+                        if (i <= 3) console.log(`Row ${i}: SHOWING`);
                     } else {
                         row.classList.add('hidden');
+                        if (i <= 3) console.log(`Row ${i}: HIDING (player=${showByPlayer}, level=${showByLevel}, status=${showByStatus})`);
                     }
                 }
             }
+        }
+        
+        function updateColumnVisibilityForPlayerFilter(playerFilter) {
+            const levelFilterDropdown = document.getElementById('levelFilter');
+            const statusFilterDropdown = document.getElementById('statusFilter');
+            
+            if (playerFilter === 'available') {
+                // Check if we need to change filter values
+                let needsRefilter = false;
+                if (levelFilterDropdown && levelFilterDropdown.value !== 'all') {
+                    levelFilterDropdown.value = 'all';
+                    needsRefilter = true;
+                }
+                if (statusFilterDropdown && statusFilterDropdown.value !== 'all') {
+                    statusFilterDropdown.value = 'all';
+                    needsRefilter = true;
+                }
+                
+                // If we changed filters, trigger re-filter and return true to stop current filter
+                if (needsRefilter) {
+                    setTimeout(() => filterTable(), 0);
+                    return true;
+                }
+                
+                // Hide all columns except Number and Name
+                const columnsToHide = ['col-captain', 'col-b3', 'col-c1', 'col-c2', 'col-tcr', 'col-size', 'col-status', 'col-notes'];
+                columnsToHide.forEach(col => {
+                    const checkbox = document.getElementById('toggle-' + col);
+                    if (checkbox) {
+                        checkbox.checked = false;
+                        toggleColumn(col);
+                    }
+                });
+                
+                // Ensure Number and Name are visible
+                ['col-number', 'col-name'].forEach(col => {
+                    const checkbox = document.getElementById('toggle-' + col);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        toggleColumn(col);
+                    }
+                });
+                
+                // Disable the filters and style them as disabled
+                if (levelFilterDropdown) {
+                    levelFilterDropdown.disabled = true;
+                    levelFilterDropdown.style.backgroundColor = '#e0e0e0';
+                    levelFilterDropdown.style.color = '#666';
+                    levelFilterDropdown.style.cursor = 'not-allowed';
+                }
+                if (statusFilterDropdown) {
+                    statusFilterDropdown.disabled = true;
+                    statusFilterDropdown.style.backgroundColor = '#e0e0e0';
+                    statusFilterDropdown.style.color = '#666';
+                    statusFilterDropdown.style.cursor = 'not-allowed';
+                }
+            } else {
+                // Show all columns when not in "Available Jerseys Only" mode
+                const columnsToShow = ['col-captain', 'col-b3', 'col-c1', 'col-c2', 'col-tcr', 'col-size', 'col-status', 'col-notes', 'col-number', 'col-name'];
+                columnsToShow.forEach(col => {
+                    const checkbox = document.getElementById('toggle-' + col);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        toggleColumn(col);
+                    }
+                });
+                
+                // Re-enable filters
+                if (levelFilterDropdown) {
+                    levelFilterDropdown.disabled = false;
+                    levelFilterDropdown.style.backgroundColor = 'white';
+                    levelFilterDropdown.style.color = '#006847';
+                    levelFilterDropdown.style.cursor = 'pointer';
+                }
+                if (statusFilterDropdown) {
+                    statusFilterDropdown.disabled = false;
+                    statusFilterDropdown.style.backgroundColor = 'white';
+                    statusFilterDropdown.style.color = '#006847';
+                    statusFilterDropdown.style.cursor = 'pointer';
+                }
+            }
+            
+            return false; // No filter changes needed, continue with current filter
         }
         
         function updateColumnVisibilityForLevel(levelFilter) {
