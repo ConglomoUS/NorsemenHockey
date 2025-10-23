@@ -5,23 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Norsemen Hockey - Player Roster</title>
     <style>
+        @font-face {
+            font-family: 'Emilio';
+            src: url('CSS/emilio 20.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        
+        .captain-letter {
+            font-family: 'Emilio', serif;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
-            background-color: #f5f5f5;
+            background-color: #000000;
+            background: linear-gradient(135deg, #000000 0%, #1a3d1a 100%);
+            min-height: 100vh;
         }
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             background-color: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border: 3px solid #006847;
         }
         h1 {
-            color: #1a472a;
+            color: #006847;
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            font-size: 2.5em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #FFB81C;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 20px;
         }
         table {
             width: 100%;
@@ -34,919 +59,1951 @@
             text-align: left;
         }
         th {
-            background-color: #1a472a;
-            color: white;
+            background: linear-gradient(to bottom, #006847 0%, #004830 100%);
+            color: #FFB81C;
             font-weight: bold;
+            text-align: center;
+            border: 1px solid #000000;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 20px;
+        }
+        th:hover {
+            background: linear-gradient(to bottom, #007850 0%, #005838 100%);
+        }
+        th.sort-asc::after {
+            content: " ▲";
+            position: absolute;
+            right: 5px;
+            font-size: 0.8em;
+        }
+        th.sort-desc::after {
+            content: " ▼";
+            position: absolute;
+            right: 5px;
+            font-size: 0.8em;
         }
         tr:nth-child(even) {
             background-color: #f9f9f9;
         }
         tr:hover {
-            background-color: #f5f5f5;
+            background-color: #e8f5e9;
         }
         b {
-            color: #d32f2f;
+            color: #FFB81C;
             font-weight: bold;
         }
         .jersey-number {
             font-weight: bold;
             text-align: center;
+            color: #006847;
         }
         .filter-container {
             margin: 20px 0;
             text-align: center;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .filter-group {
+            display: inline-block;
         }
         .filter-container label {
             font-weight: bold;
             margin-right: 10px;
-            color: #1a472a;
+            color: #006847;
         }
         .filter-container select {
             padding: 8px 12px;
-            border: 2px solid #1a472a;
+            border: 2px solid #006847;
             border-radius: 4px;
             background-color: white;
-            color: #1a472a;
+            color: #006847;
             font-size: 16px;
             cursor: pointer;
         }
         .filter-container select:focus {
             outline: none;
-            border-color: #2e7d32;
-            box-shadow: 0 0 5px rgba(26, 71, 42, 0.3);
+            border-color: #FFB81C;
+            box-shadow: 0 0 5px rgba(255, 184, 28, 0.5);
         }
         .hidden {
             display: none;
         }
+        .level-cell {
+            text-align: center;
+            font-weight: bold;
+        }
+        .level-yes {
+            color: #006847;
+            font-size: 1.2em;
+        }
+        .level-no {
+            color: #ccc;
+        }
+        .column-visibility {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border: 2px solid #006847;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .column-visibility h3 {
+            color: #006847;
+            margin: 0 0 10px 0;
+            font-size: 1.1em;
+        }
+        .column-visibility label {
+            display: inline-block;
+            margin: 5px 10px;
+            color: #006847;
+            cursor: pointer;
+        }
+        .column-visibility input[type="checkbox"] {
+            margin-right: 5px;
+            cursor: pointer;
+        }
+        .col-number { }
+        .col-name { }
+        .col-b3 { }
+        .col-c1 { }
+        .col-c2 { }
+        .col-tcr { }
+        .col-captain { }
+        .col-size { }
+        .col-status { }
+        .col-notes { }
     </style>
     <script>
+        function toggleColumn(columnClass) {
+            const elements = document.querySelectorAll('.' + columnClass);
+            const checkbox = document.getElementById('toggle-' + columnClass);
+            
+            elements.forEach(element => {
+                if (checkbox.checked) {
+                    element.style.display = '';
+                } else {
+                    element.style.display = 'none';
+                }
+            });
+        }
+        
         function filterTable() {
-            const filter = document.getElementById('playerFilter').value;
+            const playerFilter = document.getElementById('playerFilter').value;
+            const levelFilter = document.getElementById('levelFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
             const table = document.getElementById('rosterTable');
             const rows = table.getElementsByTagName('tr');
+            
+            // Auto-adjust column visibility based on level filter
+            updateColumnVisibilityForLevel(levelFilter);
             
             // Skip header row (index 0)
             for (let i = 1; i < rows.length; i++) {
                 const row = rows[i];
-                const nameCell = row.getElementsByTagName('td')[1]; // Name column
+                const nameCell = row.getElementsByTagName('td')[2]; // Name column (was 1, now 2 with Captain column first)
+                const statusCell = row.getElementsByTagName('td')[9]; // Status column (was 8, now 9 with Captain column first)
                 
-                if (nameCell) {
+                if (nameCell && statusCell) {
                     const isAvailable = nameCell.innerHTML.includes('<b>AVAILABLE</b>');
+                    const statusText = statusCell.textContent.trim().toLowerCase();
+                    const isActive = statusText === 'active';
+                    const isInactive = statusText === 'inactive';
+                    const hasNoStatus = statusText === '';
                     
-                    if (filter === 'all') {
-                        row.classList.remove('hidden');
-                    } else if (filter === 'available') {
-                        if (isAvailable) {
-                            row.classList.remove('hidden');
-                        } else {
-                            row.classList.add('hidden');
+                    // Check player filter
+                    let showByPlayer = false;
+                    if (playerFilter === 'all') {
+                        showByPlayer = !hasNoStatus; // Exclude empty status rows (AVAILABLE/RESERVED) unless specifically requested
+                    } else if (playerFilter === 'available') {
+                        showByPlayer = isAvailable;
+                    }
+                    
+                    // Check level filter
+                    let showByLevel = false;
+                    if (levelFilter === 'all') {
+                        showByLevel = true;
+                    } else {
+                        // Check if the player has a checkmark in the selected level column
+                        // Updated indices: Captain is now 0, so B3=3, C1=4, C2=5, TCR=6
+                        const levelIndex = {'b3': 3, 'c1': 4, 'c2': 5, 'tcr': 6}[levelFilter];
+                        const levelCell = row.getElementsByTagName('td')[levelIndex];
+                        if (levelCell && levelCell.innerHTML.includes('✓')) {
+                            showByLevel = true;
                         }
+                    }
+                    
+                    // Check status filter
+                    let showByStatus = false;
+                    if (statusFilter === 'all') {
+                        showByStatus = true;
+                    } else if (statusFilter === 'active') {
+                        showByStatus = isActive;
+                    } else if (statusFilter === 'inactive') {
+                        showByStatus = isInactive;
+                    }
+                    
+                    // Show row only if all filters pass
+                    if (showByPlayer && showByLevel && showByStatus) {
+                        row.classList.remove('hidden');
+                    } else {
+                        row.classList.add('hidden');
                     }
                 }
             }
         }
         
-        // Filter table on page load to show only available jerseys by default
+        function updateColumnVisibilityForLevel(levelFilter) {
+            const levelColumns = ['col-b3', 'col-c1', 'col-c2', 'col-tcr'];
+            const levelMap = {
+                'b3': 'col-b3',
+                'c1': 'col-c1',
+                'c2': 'col-c2',
+                'tcr': 'col-tcr'
+            };
+            
+            if (levelFilter === 'all') {
+                // Show all level columns
+                levelColumns.forEach(col => {
+                    document.getElementById('toggle-' + col).checked = true;
+                    toggleColumn(col);
+                });
+            } else {
+                // Hide all level columns except the selected one
+                const selectedColumn = levelMap[levelFilter];
+                levelColumns.forEach(col => {
+                    if (col === selectedColumn) {
+                        document.getElementById('toggle-' + col).checked = true;
+                    } else {
+                        document.getElementById('toggle-' + col).checked = false;
+                    }
+                    toggleColumn(col);
+                });
+            }
+        }
+        
+        let currentSortColumn = -1;
+        let sortAscending = true;
+        
+        function sortTable(columnIndex) {
+            const table = document.getElementById('rosterTable');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.getElementsByTagName('tr'));
+            const headers = table.querySelectorAll('th');
+            
+            // Toggle sort direction if clicking same column
+            if (currentSortColumn === columnIndex) {
+                sortAscending = !sortAscending;
+            } else {
+                sortAscending = true;
+                currentSortColumn = columnIndex;
+            }
+            
+            // Remove sort indicators from all headers
+            headers.forEach(header => {
+                header.classList.remove('sort-asc', 'sort-desc');
+            });
+            
+            // Add sort indicator to current header
+            if (sortAscending) {
+                headers[columnIndex].classList.add('sort-asc');
+            } else {
+                headers[columnIndex].classList.add('sort-desc');
+            }
+            
+            // Sort the rows
+            rows.sort((a, b) => {
+                const cellA = a.getElementsByTagName('td')[columnIndex];
+                const cellB = b.getElementsByTagName('td')[columnIndex];
+                
+                if (!cellA || !cellB) return 0;
+                
+                let valueA = cellA.textContent.trim();
+                let valueB = cellB.textContent.trim();
+                
+                // Handle jersey numbers (now column 1, was 0)
+                if (columnIndex === 1) {
+                    if (valueA === '??') valueA = '999';
+                    if (valueB === '??') valueB = '999';
+                    // Handle 00, 01, etc as numbers
+                    const numA = parseInt(valueA) || 0;
+                    const numB = parseInt(valueB) || 0;
+                    return sortAscending ? numA - numB : numB - numA;
+                }
+                
+                // Handle level columns (✓ comes before -) - now columns 3-6 (was 2-5)
+                if (columnIndex >= 3 && columnIndex <= 6) {
+                    if (valueA === '✓' && valueB !== '✓') return sortAscending ? -1 : 1;
+                    if (valueA !== '✓' && valueB === '✓') return sortAscending ? 1 : -1;
+                    return 0;
+                }
+                
+                // String comparison for other columns
+                return sortAscending ? 
+                    valueA.localeCompare(valueB, undefined, {numeric: true, sensitivity: 'base'}) :
+                    valueB.localeCompare(valueA, undefined, {numeric: true, sensitivity: 'base'});
+            });
+            
+            // Re-append rows in sorted order
+            rows.forEach(row => tbody.appendChild(row));
+        }
+        
+        // Filter table on page load to show only active players by default
         window.onload = function() {
-            filterTable();
+            // Call filterTable with a small delay to ensure DOM is fully ready
+            setTimeout(filterTable, 50);
+            
+            // Add click handlers to table headers
+            const headers = document.querySelectorAll('#rosterTable th');
+            headers.forEach((header, index) => {
+                header.addEventListener('click', () => sortTable(index));
+            });
         };
     </script>
-    </style>
 </head>
 <body>
     <div class="container">
-        <h1>Norsemen Hockey Team - Player Roster</h1>
+        <h1>⭐ Norsemen Hockey Team ⭐</h1>
+        <div class="subtitle">Player Roster - North Stars Legacy</div>
         
         <div class="filter-container">
-            <label for="playerFilter">Show:</label>
-            <select id="playerFilter" onchange="filterTable()">
-                <option value="all">All Players</option>
-                <option value="available" selected>Available Jerseys Only</option>
-            </select>
+            <div class="filter-group">
+                <label for="playerFilter">Show:</label>
+                <select id="playerFilter" onchange="filterTable()">
+                    <option value="all">All Players</option>
+                    <option value="available">Available Jerseys Only</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="levelFilter">Level:</label>
+                <select id="levelFilter" onchange="filterTable()">
+                    <option value="all">All Levels</option>
+                    <option value="b3">B3</option>
+                    <option value="c1">C1</option>
+                    <option value="c2">C2</option>
+                    <option value="tcr">TCR</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="statusFilter">Status:</label>
+                <select id="statusFilter" onchange="filterTable()">
+                    <option value="all">All</option>
+                    <option value="active" selected>Active Only</option>
+                    <option value="inactive">Inactive Only</option>
+                </select>
+            </div>
         </div>
         
-        <table id="rosterTable">>
+        <div class="column-visibility">
+            <h3>📋 Column Visibility</h3>
+            <label>
+                <input type="checkbox" id="toggle-col-number" checked onchange="toggleColumn('col-number')">
+                Number
+            </label>
+            <label>
+                <input type="checkbox" id="toggle-col-name" checked onchange="toggleColumn('col-name')">
+                Name
+            </label>
+            <label>
+                <input type="checkbox" id="toggle-col-b3" checked onchange="toggleColumn('col-b3')">
+                B3
+            </label>
+            <label>
+                <input type="checkbox" id="toggle-col-c1" checked onchange="toggleColumn('col-c1')">
+                C1
+            </label>
+            <label>
+                <input type="checkbox" id="toggle-col-c2" checked onchange="toggleColumn('col-c2')">
+                C2
+            </label>
+            <label>
+                <input type="checkbox" id="toggle-col-tcr" checked onchange="toggleColumn('col-tcr')">
+                TCR
+            </label>
+            <label>
+                <input type="checkbox" id="toggle-col-captain" checked onchange="toggleColumn('col-captain')">
+                Captain
+            </label>
+            <label>
+                <input type="checkbox" id="toggle-col-size" checked onchange="toggleColumn('col-size')">
+                Size
+            </label>
+            <label>
+                <input type="checkbox" id="toggle-col-status" checked onchange="toggleColumn('col-status')">
+                Status
+            </label>
+            <label>
+                <input type="checkbox" id="toggle-col-notes" checked onchange="toggleColumn('col-notes')">
+                Notes
+            </label>
+        </div>
+        
+        <table id="rosterTable">
             <thead>
                 <tr>
-                    <th>Number</th>
-                    <th>Name</th>
-                    <th>Level</th>
-                    <th>Size</th>
-                    <th>Player Status</th>
+                    <th class="col-captain">Captain</th>
+                    <th class="col-number">Number</th>
+                    <th class="col-name">Name</th>
+                    <th class="col-b3">B3</th>
+                    <th class="col-c1">C1</th>
+                    <th class="col-c2">C2</th>
+                    <th class="col-tcr">TCR</th>
+                    <th class="col-size">Size</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-notes">Notes</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td class="jersey-number">0</td>
-                    <td>RESERVED SPARE</td>
-                    <td>RESERVED SPARE</td>
-                    <td>XL</td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">1</td>
-                    <td>Riley Swanson (GK)</td>
-                    <td>B3</td>
-                    <td>Goalie Cut XXL</td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">1</td>
-                    <td>Jake Bringgold (GK)</td>
-                    <td>TCR</td>
-                    <td>Goalie Cut XXL</td>
-                    <td>Inactive (Reach Out for Subs)</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">1</td>
-                    <td>Justin Morlan (GK)</td>
-                    <td>TCR</td>
-                    <td>Goalie Cut XXL</td>
-                    <td>Active (Old Riley Jersey)</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">2</td>
-                    <td>Ron McGuire</td>
-                    <td>C2</td>
-                    <td>XL</td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">3</td>
-                    <td>Scott Nolden</td>
-                    <td>C1</td>
-                    <td>L</td>
-                    <td>Inactive, Hold till Fall 2028</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">4</td>
-                    <td>Chris Beckman</td>
-                    <td>C1/TCR</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">5</td>
-                    <td>Carson Turnquist</td>
-                    <td>C2</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">6</td>
-                    <td>James Ranheim</td>
-                    <td>C1</td>
-                    <td>XXL</td>
-                    <td>Inactive, Hold till Fall 2027</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">7</td>
-                    <td>Scott McIntyre</td>
-                    <td>C1/TCR</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">8</td>
-                    <td>Charles Pink</td>
-                    <td>C1</td>
-                    <td>XL</td>
-                    <td>Inactive, Hold till Fall 2027</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">9</td>
-                    <td>Ben Foote</td>
-                    <td>C1/TCR</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">00</td>
-                    <td>RESERVED SPARE</td>
-                    <td>RESERVED SPARE</td>
-                    <td>XXL</td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">01</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">02</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">03</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">04</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">05</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">06</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">07</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">08</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">09</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">10</td>
-                    <td>Jeff Jamar</td>
-                    <td>C2</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">11</td>
-                    <td>Jon Braufman</td>
-                    <td>C2</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">12</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">13</td>
-                    <td>Steve Heinonen</td>
-                    <td>TCR</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">14</td>
-                    <td>John Clark</td>
-                    <td>B3/C1</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">15</td>
-                    <td>Donnie Fuller</td>
-                    <td>B3/TCR</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">16</td>
-                    <td>Jeffrey Jackson</td>
-                    <td>C2</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">17</td>
-                    <td>Jeffrey Marone</td>
-                    <td>C2</td>
-                    <td></td>
-                    <td>Inactive, Hold till Fall 2026</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">18</td>
-                    <td>Ben Solheid</td>
-                    <td>B3</td>
-                    <td></td>
-                    <td>Inactive, Hold till Fall 2028</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">19</td>
-                    <td>Chris Smith</td>
-                    <td>C2</td>
-                    <td></td>
-                    <td>Inactive, Hold till Fall 2027</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">19</td>
-                    <td>TJ Rice</td>
-                    <td>B3</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">20</td>
-                    <td>Brad Holzem</td>
-                    <td>TCR</td>
-                    <td>XL</td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">21</td>
-                    <td>Mark Williams</td>
-                    <td>C2</td>
-                    <td></td>
-                    <td>Inactive, Hold till Fall 2026</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">22</td>
-                    <td>Joe Udvari</td>
-                    <td>B3</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">23</td>
-                    <td>Jacobe Timler</td>
-                    <td>C2</td>
-                    <td>L</td>
-                    <td>Inactive, Hold till Fall 2027</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">24</td>
-                    <td>Dan Gallagan</td>
-                    <td>B3</td>
-                    <td>L</td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">25</td>
-                    <td>Jack Kostreba</td>
-                    <td>C2</td>
-                    <td></td>
-                    <td>Inactive, Hold till Fall 2028</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">26</td>
-                    <td>John Bellingham</td>
-                    <td>C2</td>
-                    <td>XXL</td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">27</td>
-                    <td>Josh Resch</td>
-                    <td>B3</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">28</td>
-                    <td>Nate Barnes</td>
-                    <td>B3</td>
-                    <td>L</td>
-                    <td>Inactive, Hold till Fall 2027</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">28</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">29</td>
-                    <td>Sean Mickelson</td>
-                    <td>C2</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">30</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">31</td>
-                    <td>Eric Bergstresser</td>
-                    <td>C2</td>
-                    <td>Goalie Cut XXL</td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">32</td>
-                    <td>John Ursu</td>
-                    <td>TCR</td>
-                    <td>XL</td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">33</td>
-                    <td>Ryan Fredrick</td>
-                    <td>B3</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">34</td>
-                    <td>Alec Ness</td>
-                    <td>TCR Sub</td>
-                    <td>L</td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">35</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">36</td>
-                    <td>Tony Weinstine</td>
-                    <td>C2</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">37</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">38</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">39</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">40</td>
-                    <td>Kyle Rasmussen</td>
-                    <td>B3</td>
-                    <td></td>
-                    <td>Inactive, Hold till Fall 2028</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">41</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">42</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">43</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">44</td>
-                    <td>Andy Kester</td>
-                    <td>C2</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">45</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">46</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">47</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">48</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">49</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">50</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">51</td>
-                    <td>Michael McAlpin</td>
-                    <td>C2</td>
-                    <td></td>
-                    <td>Inactive, Hold till Fall 2028</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">52</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">53</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">54</td>
-                    <td>Jeremy Anderson</td>
-                    <td>B3</td>
-                    <td>M</td>
-                    <td>Inactive, Hold till Fall 2028</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">55</td>
-                    <td>David Shuler</td>
-                    <td>C2</td>
-                    <td></td>
-                    <td>Inactive, Hold till Fall 2027</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">56</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">57</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">58</td>
-                    <td>RESERVED SPARE</td>
-                    <td>RESERVED SPARE</td>
-                    <td>XXL</td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">59</td>
-                    <td>Ken Swanson</td>
-                    <td>B3</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">60</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">61</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">62</td>
-                    <td>Arnie Svenningsen</td>
-                    <td>C2</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">63</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">64</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">65</td>
-                    <td>Kurt Smith</td>
-                    <td>TCR</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">66</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">67</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">68</td>
-                    <td>Scott Haraldson</td>
-                    <td></td>
-                    <td></td>
-                    <td>Inactive, Hold till Fall 2027</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">68</td>
-                    <td>Tom Albin</td>
-                    <td>DUPLICATE</td>
-                    <td>DUPLICATE</td>
-                    <td>Spare used by Jason Tofte</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">69</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">70</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">71</td>
-                    <td>Ben Boaz</td>
-                    <td></td>
-                    <td></td>
-                    <td>Inactive, Hold till Fall 2027</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">72</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">73</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">74</td>
-                    <td>Gary Zupfer</td>
-                    <td>C1</td>
-                    <td>L</td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">75</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">76</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">77</td>
-                    <td>Patrick Sutton</td>
-                    <td>B3/TCR</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">78</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">79</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">80</td>
-                    <td>BJ Ragudo</td>
-                    <td>B3</td>
-                    <td>M</td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">81</td>
-                    <td>Rick O'Connor</td>
-                    <td>C2</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">81</td>
-                    <td>RESERVED SPARE</td>
-                    <td>RESERVED SPARE</td>
-                    <td>L</td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">82</td>
-                    <td>Rich Logan</td>
-                    <td>C1/TCR</td>
-                    <td>XL</td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">83</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">84</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">85</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">86</td>
-                    <td>Matthew Michlin</td>
-                    <td>TCR</td>
-                    <td>L</td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">87</td>
-                    <td>Tom Plantikow</td>
-                    <td>TCR Sub</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">88</td>
-                    <td>Brett Krebsbach</td>
-                    <td>B3</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">89</td>
-                    <td>Collin Jones</td>
-                    <td>B3</td>
-                    <td>XL</td>
-                    <td>Inactive, Hold till Fall 2028</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">90</td>
-                    <td>Dan Bolles</td>
-                    <td>C1</td>
-                    <td>L</td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">91</td>
-                    <td>Jason Hankins</td>
-                    <td>TCR</td>
-                    <td></td>
-                    <td>Active, Hold till Fall 2027</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">92</td>
-                    <td>Ted Johnson</td>
-                    <td>C2</td>
-                    <td>L</td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">93</td>
-                    <td>Ryan Affolter</td>
-                    <td>TCR</td>
-                    <td>L</td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">94</td>
-                    <td>Thomas Kalb</td>
-                    <td>C1</td>
-                    <td>L</td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">95</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">96</td>
-                    <td>Casey Murnane</td>
-                    <td>B3/TCR</td>
-                    <td></td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">97</td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td><b>AVAILABLE</b></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">98</td>
-                    <td>Ryan Galligan</td>
-                    <td>B3</td>
-                    <td>VALIDATE</td>
-                    <td>Active</td>
-                </tr>
-                <tr>
-                    <td class="jersey-number">99</td>
-                    <td>Lenny Poppenhagen</td>
-                    <td>B3</td>
-                    <td>XXL</td>
-                    <td>Active</td>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">0</td>
+                    <td class="col-name">RESERVED SPARE</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">XL</td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">1</td>
+                    <td class="col-name">Riley Swanson (GK)</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">Goalie Cut XXL</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">1</td>
+                    <td class="col-name">Jake Bringgold (GK)</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size">Goalie Cut XXL</td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Reach Out for Subs</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">1</td>
+                    <td class="col-name">Justin Morlan (GK)</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size">Goalie Cut XXL</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes">Old Riley Jersey</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"><span class="captain-letter">C</span></td>
+                    <td class="col-number jersey-number">2</td>
+                    <td class="col-name">Ron McGuire</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">XL</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">3</td>
+                    <td class="col-name">Scott Nolden</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">L</td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Hold till Fall 2028</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">4</td>
+                    <td class="col-name">Chris Beckman</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">5</td>
+                    <td class="col-name">Carson Turnquist</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">6</td>
+                    <td class="col-name">James Ranheim</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">XXL</td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Hold till Fall 2027</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">7</td>
+                    <td class="col-name">Scott McIntyre</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">8</td>
+                    <td class="col-name">Charles Pink</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">XL</td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Hold till Fall 2027</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"><span class="captain-letter">A</span></td>
+                    <td class="col-number jersey-number">9</td>
+                    <td class="col-name">Ben Foote</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">00</td>
+                    <td class="col-name">RESERVED SPARE</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">XXL</td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">01</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">02</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">03</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">04</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">05</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">06</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">07</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">08</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">09</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">10</td>
+                    <td class="col-name">Jeff Jamar</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">11</td>
+                    <td class="col-name">Jon Braufman</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">12</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">13</td>
+                    <td class="col-name">Steve Heinonen</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">14</td>
+                    <td class="col-name">John Clark</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">15</td>
+                    <td class="col-name">Donnie Fuller</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">16</td>
+                    <td class="col-name">Jeffrey Jackson</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">17</td>
+                    <td class="col-name">Jeffrey Marone</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Hold till Fall 2026</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">18</td>
+                    <td class="col-name">Ben Solheid</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Hold till Fall 2028</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">19</td>
+                    <td class="col-name">Chris Smith</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Hold till Fall 2027</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">19</td>
+                    <td class="col-name">TJ Rice</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">20</td>
+                    <td class="col-name">Brad Holzem</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size">XL</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">21</td>
+                    <td class="col-name">Mark Williams</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Hold till Fall 2026</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">22</td>
+                    <td class="col-name">Joe Udvari</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">23</td>
+                    <td class="col-name">Jacobe Timler</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">L</td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Hold till Fall 2027</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">24</td>
+                    <td class="col-name">Dan Gallagan</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">L</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">25</td>
+                    <td class="col-name">Jack Kostreba</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Hold till Fall 2028</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">26</td>
+                    <td class="col-name">John Bellingham</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">XXL</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">27</td>
+                    <td class="col-name">Josh Resch</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">28</td>
+                    <td class="col-name">Nate Barnes</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">L</td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Hold till Fall 2027</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">29</td>
+                    <td class="col-name">Sean Mickelson</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">31</td>
+                    <td class="col-name">Eric Bergstresser (GK)</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">Goalie Cut XXL</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">32</td>
+                    <td class="col-name">John Ursu</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size">XL</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">33</td>
+                    <td class="col-name">Ryan Fredrick</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">34</td>
+                    <td class="col-name">Alec Ness</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size">L</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">36</td>
+                    <td class="col-name">Tony Weinstine</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">40</td>
+                    <td class="col-name">Kyle Rasmussen</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Hold till Fall 2028</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">44</td>
+                    <td class="col-name">Andy Kester</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">51</td>
+                    <td class="col-name">Michael McAlpin</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Hold till Fall 2028</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">54</td>
+                    <td class="col-name">Jeremy Anderson</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">M</td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Hold till Fall 2028</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">55</td>
+                    <td class="col-name">David Shuler</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Hold till Fall 2027</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">59</td>
+                    <td class="col-name">Ken Swanson</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">62</td>
+                    <td class="col-name">Arnie Svenningsen</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">65</td>
+                    <td class="col-name">Kurt Smith</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">68</td>
+                    <td class="col-name">Scott Haraldson</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Hold till Fall 2027</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">68</td>
+                    <td class="col-name">Tom Albin</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">DUPLICATE</td>
+                    <td class="col-status"></td>
+                    <td class="col-notes">Spare used by Jason Tofte</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">71</td>
+                    <td class="col-name">Ben Boaz</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Hold till Fall 2027</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">74</td>
+                    <td class="col-name">Gary Zupfer</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">L</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"><span class="captain-letter">A</span></td>
+                    <td class="col-number jersey-number">77</td>
+                    <td class="col-name">Patrick Sutton</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">80</td>
+                    <td class="col-name">BJ Ragudo</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">M</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">81</td>
+                    <td class="col-name">Rick O'Connor</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">82</td>
+                    <td class="col-name">Rich Logan</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size">XL</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">86</td>
+                    <td class="col-name">Matthew Michlin</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size">L</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">87</td>
+                    <td class="col-name">Tom Plantikow</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">88</td>
+                    <td class="col-name">Brett Krebsbach</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">89</td>
+                    <td class="col-name">Collin Jones</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">XL</td>
+                    <td class="col-status">Inactive</td>
+                    <td class="col-notes">Hold till Fall 2028</td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">90</td>
+                    <td class="col-name">Dan Bolles</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">L</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">91</td>
+                    <td class="col-name">Jason Hankins</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">92</td>
+                    <td class="col-name">Ted Johnson</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-yes">✓</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">L</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">93</td>
+                    <td class="col-name">Ryan Affolter</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size">L</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">94</td>
+                    <td class="col-name">Thomas Kalb</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">L</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">96</td>
+                    <td class="col-name">Casey Murnane</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">98</td>
+                    <td class="col-name">Ryan Galligan</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size">VALIDATE</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"><span class="captain-letter">C</span></td>
+                    <td class="col-number jersey-number">99</td>
+                    <td class="col-name">Lenny Poppenhagen</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-yes">✓</td>
+                    <td class="col-size">XXL</td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">30</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">35</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">37</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">38</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">39</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">41</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">42</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">43</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">45</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">46</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">47</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">48</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">49</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">50</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">52</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">53</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">56</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">57</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">58</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">60</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">61</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">63</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">64</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">66</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">67</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">69</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">70</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">72</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">73</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">75</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">76</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">78</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">79</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">83</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">84</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">85</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">95</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">97</td>
+                    <td class="col-name"><b>AVAILABLE</b></td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status"></td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">??</td>
+                    <td class="col-name">Shane Lowenberger</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">??</td>
+                    <td class="col-name">Brian Smith</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">??</td>
+                    <td class="col-name">Bradley Westerberg</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">??</td>
+                    <td class="col-name">Nick Wollan</td>
+                    <td class="col-b3 level-cell level-yes">✓</td>
+                    <td class="col-c1 level-cell level-no">-</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">??</td>
+                    <td class="col-name">Jack Alger</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">??</td>
+                    <td class="col-name">Joe Wagner</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">??</td>
+                    <td class="col-name">Justin Vogt</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">??</td>
+                    <td class="col-name">Brian Flick</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">??</td>
+                    <td class="col-name">Brian Sadler</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">??</td>
+                    <td class="col-name">Jake Gerth (GK)</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">??</td>
+                    <td class="col-name">Ben Logan</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">??</td>
+                    <td class="col-name">Chris Warlick</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">??</td>
+                    <td class="col-name">Tim Kaley</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">??</td>
+                    <td class="col-name">Darren McDonald</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
+                </tr>
+                <tr>
+                    <td class="col-captain"></td>
+                    <td class="col-number jersey-number">??</td>
+                    <td class="col-name">Chris Leier</td>
+                    <td class="col-b3 level-cell level-no">-</td>
+                    <td class="col-c1 level-cell level-yes">✓</td>
+                    <td class="col-c2 level-cell level-no">-</td>
+                    <td class="col-tcr level-cell level-no">-</td>
+                    <td class="col-size"></td>
+                    <td class="col-status">Active</td>
+                    <td class="col-notes"></td>
                 </tr>
             </tbody>
         </table>
