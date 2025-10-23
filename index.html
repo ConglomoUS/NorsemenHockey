@@ -220,6 +220,7 @@
                 
                 if (nameCell && statusCell) {
                     const isAvailable = nameCell.innerHTML.includes('<b>AVAILABLE</b>');
+                    const isReserved = nameCell.textContent.includes('RESERVED SPARE');
                     const statusText = statusCell.textContent.trim().toLowerCase();
                     const isActive = statusText === 'active';
                     const isInactive = statusText === 'inactive';
@@ -227,13 +228,14 @@
                     
                     // Debug first few rows
                     if (i <= 3) {
-                        console.log(`Row ${i}: statusText="${statusText}", isActive=${isActive}, hasNoStatus=${hasNoStatus}`);
+                        console.log(`Row ${i}: statusText="${statusText}", isActive=${isActive}, hasNoStatus=${hasNoStatus}, isReserved=${isReserved}`);
                     }
                     
                     // Check player filter
                     let showByPlayer = false;
                     if (playerFilter === 'all') {
-                        showByPlayer = !hasNoStatus; // Exclude empty status rows (AVAILABLE/RESERVED) unless specifically requested
+                        // Show all players and reserved jerseys, but exclude AVAILABLE jerseys
+                        showByPlayer = !isAvailable;
                     } else if (playerFilter === 'available') {
                         showByPlayer = isAvailable;
                     }
