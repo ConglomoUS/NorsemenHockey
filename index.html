@@ -238,6 +238,9 @@
                         showByPlayer = !isAvailable;
                     } else if (playerFilter === 'available') {
                         showByPlayer = isAvailable;
+                    } else if (playerFilter === 'allnumbers') {
+                        // Show everything - all players, available jerseys, and reserved jerseys
+                        showByPlayer = true;
                     }
                     
                     // Check level filter
@@ -280,7 +283,7 @@
             const levelFilterDropdown = document.getElementById('levelFilter');
             const statusFilterDropdown = document.getElementById('statusFilter');
             
-            if (playerFilter === 'available') {
+            if (playerFilter === 'available' || playerFilter === 'allnumbers') {
                 // Check if we need to change filter values
                 let needsRefilter = false;
                 if (levelFilterDropdown && levelFilterDropdown.value !== 'all') {
@@ -298,26 +301,28 @@
                     return true;
                 }
                 
-                // Hide all columns except Number and Name
-                const columnsToHide = ['col-captain', 'col-b3', 'col-c1', 'col-c2', 'col-tcr', 'col-size', 'col-status', 'col-notes'];
-                columnsToHide.forEach(col => {
-                    const checkbox = document.getElementById('toggle-' + col);
-                    if (checkbox) {
-                        checkbox.checked = false;
-                        toggleColumn(col);
-                    }
-                });
+                // Only hide columns if in "Available Jerseys Only" mode
+                if (playerFilter === 'available') {
+                    // Hide all columns except Number and Name
+                    const columnsToHide = ['col-captain', 'col-b3', 'col-c1', 'col-c2', 'col-tcr', 'col-size', 'col-status', 'col-notes'];
+                    columnsToHide.forEach(col => {
+                        const checkbox = document.getElementById('toggle-' + col);
+                        if (checkbox) {
+                            checkbox.checked = false;
+                            toggleColumn(col);
+                        }
+                    });
+                    
+                    // Ensure Number and Name are visible
+                    ['col-number', 'col-name'].forEach(col => {
+                        const checkbox = document.getElementById('toggle-' + col);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                            toggleColumn(col);
+                        }
+                    });
                 
-                // Ensure Number and Name are visible
-                ['col-number', 'col-name'].forEach(col => {
-                    const checkbox = document.getElementById('toggle-' + col);
-                    if (checkbox) {
-                        checkbox.checked = true;
-                        toggleColumn(col);
-                    }
-                });
-                
-                // Disable the filters and style them as disabled
+                // Disable the filters and style them as disabled (only for "Available Jerseys Only")
                 if (levelFilterDropdown) {
                     levelFilterDropdown.disabled = true;
                     levelFilterDropdown.style.backgroundColor = '#e0e0e0';
@@ -330,8 +335,9 @@
                     statusFilterDropdown.style.color = '#666';
                     statusFilterDropdown.style.cursor = 'not-allowed';
                 }
+            }
             } else {
-                // Show all columns when not in "Available Jerseys Only" mode
+                // Show all columns when not in special filter modes
                 const columnsToShow = ['col-captain', 'col-b3', 'col-c1', 'col-c2', 'col-tcr', 'col-size', 'col-status', 'col-notes', 'col-number', 'col-name'];
                 columnsToShow.forEach(col => {
                     const checkbox = document.getElementById('toggle-' + col);
@@ -478,6 +484,7 @@
                 <select id="playerFilter" onchange="filterTable()">
                     <option value="all">All Players</option>
                     <option value="available">Available Jerseys Only</option>
+                    <option value="allnumbers">All Numbers</option>
                 </select>
             </div>
             <div class="filter-group">
